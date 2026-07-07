@@ -7,6 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+
+	"memo/controller"
 )
 
 type Memo struct {
@@ -112,7 +114,13 @@ func main() {
 	// 自动迁移
 	db.AutoMigrate(&Memo{})
 
-	// GET请求，获取所有备忘录
+	// 用户数据库的初始化
+	userDB := controller.InitUserDB()
+	// 登录注册操作
+	route.POST("/login", controller.LoginFunc(userDB))
+	route.POST("/register", controller.RegisterFunc(userDB))
+
+	// 对于备忘录的CRUD操作
 	route.GET("/index", getFunc)
 	route.POST("/index", postFunc)
 	route.PUT("/index", putFunc)

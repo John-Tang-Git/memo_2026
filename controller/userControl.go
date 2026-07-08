@@ -43,15 +43,15 @@ func LoginFunc(db *gorm.DB) gin.HandlerFunc {
 		// 判断用户输入参数是否正确
 		if len(loginUser.Name) == 0 {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-				"code":    422,
-				"message": "用户名不能为空",
+				"code": 422,
+				"msg":  "用户名不能为空",
 			})
 			return
 		}
 		if len(loginUser.Password) < 6 {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-				"code":    422,
-				"message": "密码不能少于6位",
+				"code": 422,
+				"msg":  "密码不能少于6位",
 			})
 			return
 		}
@@ -99,15 +99,15 @@ func RegisterFunc(db *gorm.DB) gin.HandlerFunc {
 		// 判断用户输入参数是否正确
 		if len(loginUser.Name) == 0 {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-				"code":    422,
-				"message": "用户名不能为空",
+				"code": 422,
+				"msg":  "用户名不能为空",
 			})
 			return
 		}
 		if len(loginUser.Password) < 6 {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-				"code":    422,
-				"message": "密码不能少于6位",
+				"code": 422,
+				"msg":  "密码不能少于6位",
 			})
 			return
 		}

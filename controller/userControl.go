@@ -2,6 +2,7 @@ package controller //用户登录注册
 
 import (
 	"fmt"
+	"memo/common"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,29 +15,30 @@ type TypeInUserInfo struct {
 	Password string `form:"password"`
 }
 
-type UserInfo struct {
-	ID       uint `gorm:"primarykey"`
-	Name     string
-	Password string
-}
+var userDB *gorm.DB //用户数据库
+var DBerr error
 
 func InitUserDB() *gorm.DB {
 	DSN := "root:Johntang2005@tcp(127.0.0.1:3306)/users?charset=utf8mb4&parseTime=True&loc=Local"
-	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
-	if err != nil {
+	userDB, DBerr = gorm.Open(mysql.Open(DSN), &gorm.Config{})
+	if DBerr != nil {
 		fmt.Println("用户数据库连接失败！")
 		return nil
 	}
 	fmt.Println("用户数据库连接成功！")
-	var user UserInfo
-	db.AutoMigrate(&user)
-	return db
+	var user common.UserInfo
+	userDB.AutoMigrate(&user)
+	return userDB
+}
+
+func GetUserDB() *gorm.DB {
+	return userDB
 }
 
 func LoginFunc(db *gorm.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var loginUser TypeInUserInfo // 用户输入的用户名和密码
-		var user UserInfo
+		var user common.UserInfo
 		ctx.ShouldBind(&loginUser) // 获取注册表单参数
 		// 判断用户输入参数是否正确
 		if len(loginUser.Name) == 0 {
@@ -66,10 +68,20 @@ func LoginFunc(db *gorm.DB) gin.HandlerFunc {
 		}
 		// 用户存在，核对密码是否正确
 		if user.Password == loginUser.Password {
+			token, err := common.ReleaseToken(user)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{
+					"code": 500,
+					"msg":  "token发放异常",
+				})
+				return
+			}
 			ctx.JSON(http.StatusOK, gin.H{
 				"code": http.StatusOK,
 				"msg":  "登陆成功！",
+				"data": gin.H{"token": token},
 			})
+
 		} else {
 			ctx.JSON(422, gin.H{
 				"code": 422,
@@ -82,7 +94,7 @@ func LoginFunc(db *gorm.DB) gin.HandlerFunc {
 func RegisterFunc(db *gorm.DB) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var loginUser TypeInUserInfo // 用户输入的用户名和密码
-		var user UserInfo
+		var user common.UserInfo
 		ctx.ShouldBind(&loginUser) // 获取注册表单参数
 		// 判断用户输入参数是否正确
 		if len(loginUser.Name) == 0 {
@@ -111,7 +123,7 @@ func RegisterFunc(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 		//用户不存在，可以注册
-		cur_user := UserInfo{Name: loginUser.Name, Password: loginUser.Password}
+		cur_user := common.UserInfo{Name: loginUser.Name, Password: loginUser.Password}
 		fmt.Println(cur_user)
 		result := db.Create(&cur_user)
 		if result.Error != nil {

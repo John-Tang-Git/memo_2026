@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"memo/controller"
+	middleware "memo/middleWare"
 )
 
 type Memo struct {
@@ -24,9 +25,10 @@ type putJson struct {
 }
 
 var (
-	db    *gorm.DB
-	err   error
-	memos []Memo
+	db     *gorm.DB
+	userDB *gorm.DB
+	err    error
+	memos  []Memo
 )
 
 // 返回全部数据
@@ -115,16 +117,16 @@ func main() {
 	db.AutoMigrate(&Memo{})
 
 	// 用户数据库的初始化
-	userDB := controller.InitUserDB()
+	userDB = controller.InitUserDB()
 	// 登录注册操作
 	route.POST("/login", controller.LoginFunc(userDB))
 	route.POST("/register", controller.RegisterFunc(userDB))
 
 	// 对于备忘录的CRUD操作
-	route.GET("/index", getFunc)
-	route.POST("/index", postFunc)
-	route.PUT("/index", putFunc)
-	route.DELETE("/index", deleteFunc)
+	route.GET("/index", middleware.Authorization(), getFunc)
+	route.POST("/index", middleware.Authorization(), postFunc)
+	route.PUT("/index", middleware.Authorization(), putFunc)
+	route.DELETE("/index", middleware.Authorization(), deleteFunc)
 
 	route.Run(":8080")
 }

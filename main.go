@@ -8,12 +8,14 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
+	"memo/common"
 	"memo/controller"
 	middleware "memo/middleWare"
 )
 
 type Memo struct {
-	ID      uint `gorm:"primarykey"`
+	MemoID  uint `gorm:"primarykey"`
+	UserID  uint
 	Content string
 	Status  int
 }
@@ -31,10 +33,14 @@ var (
 	memos  []Memo
 )
 
-// 返回全部数据
+// 返回该用户的全部数据
 func allRows(ctx *gin.Context) {
+	// 获得当前用户ID
+	tmp_user, _ := ctx.Get("user")
+	userID := tmp_user.(common.UserInfo).ID
+	// 只获得当前用户的ID
 	var mms []Memo
-	result := db.Find(&mms)
+	result := db.Where("user_id=?", userID).Find(&mms)
 	if result.Error != nil {
 		fmt.Println("错误：", result.Error.Error())
 		ctx.JSON(http.StatusBadRequest, gin.H{
@@ -64,7 +70,9 @@ func postFunc(ctx *gin.Context) {
 		fmt.Println("错误：", err.Error())
 		return
 	}
-	tmp_memo := Memo{Content: form.Content, Status: 1}
+	tmp_user, _ := ctx.Get("user")
+	userID := tmp_user.(common.UserInfo).ID
+	tmp_memo := Memo{UserID: userID, Content: form.Content, Status: 1}
 	db.Create(&tmp_memo)
 	allRows(ctx)
 }
@@ -78,6 +86,16 @@ func putFunc(ctx *gin.Context) {
 	}
 	var tmp_memo Memo
 	db.First(&tmp_memo, put.ID)
+
+	// 检查这条备忘录是不是当前用户写的
+	tmp_user, _ := ctx.Get("user")
+	userID := tmp_user.(common.UserInfo).ID
+	if tmp_memo.UserID != userID {
+		fmt.Printf("token无效，这条信息是%d写的，而目前操作者是%d", tmp_memo.UserID, userID)
+		ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "权限不足"})
+		return
+	}
+
 	// 翻转状态
 	if tmp_memo.Status == 1 {
 		tmp_memo.Status = 0
@@ -95,8 +113,20 @@ func deleteFunc(ctx *gin.Context) {
 		fmt.Println("错误：", err.Error())
 		return
 	}
-	// 根据ID删除对应行
+
 	var tmp_memo Memo
+	db.Where("memo_id=?", delete.ID).First(&tmp_memo)
+	// 检查这条备忘录是不是当前用户写的
+	tmp_user, _ := ctx.Get("user")
+	userID := tmp_user.(common.UserInfo).ID
+	fmt.Println("找到这条备忘录的作者是：", tmp_memo.UserID)
+	if tmp_memo.UserID != userID {
+		fmt.Printf("token无效，这条信息是%d写的，而目前操作者是%d", tmp_memo.UserID, userID)
+		ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "权限不足"})
+		return
+	}
+
+	// 根据memoID删除对应行
 	db.Delete(&tmp_memo, delete.ID)
 	// 返回新的全部数表
 	allRows(ctx)
@@ -106,7 +136,7 @@ func main() {
 	// 默认路由
 	route := gin.Default()
 	// 连接数据库
-	DSN := "root:Johntang2005@tcp(127.0.0.1:3306)/memo?charset=utf8mb4&parseTime=True&loc=Local"
+	DSN := "root:Johntang2005@tcp(127.0.0.1:3306)/user_memos?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err = gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if err != nil {
 		fmt.Println("数据库连接失败，错误：", err.Error())

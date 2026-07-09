@@ -1,0 +1,2 @@
+CREATE DATABASE IF NOT EXISTS user_memo;
+USE user_memo;

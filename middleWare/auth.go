@@ -27,6 +27,7 @@ func Authorization() gin.HandlerFunc {
 		// 解析tokenString
 		token, claim, err := common.ParseToken(tokenString)
 		fmt.Println("当前token对应的用户id是：", claim.UserId)
+		fmt.Println("当前token是：", tokenString)
 		if err != nil || !token.Valid {
 			fmt.Println("错误是:", err.Error())
 			ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "权限不足"})

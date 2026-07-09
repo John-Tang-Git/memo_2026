@@ -19,7 +19,7 @@ var userDB *gorm.DB //用户数据库
 var DBerr error
 
 func InitUserDB() *gorm.DB {
-	DSN := "root:Johntang2005@tcp(127.0.0.1:3306)/users?charset=utf8mb4&parseTime=True&loc=Local"
+	DSN := "root:Johntang2005@tcp(127.0.0.1:3306)/user_memos?charset=utf8mb4&parseTime=True&loc=Local"
 	userDB, DBerr = gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if DBerr != nil {
 		fmt.Println("用户数据库连接失败！")
@@ -76,6 +76,7 @@ func LoginFunc(db *gorm.DB) gin.HandlerFunc {
 				})
 				return
 			}
+			fmt.Println("token发放成功，token是：", token)
 			ctx.JSON(http.StatusOK, gin.H{
 				"code": http.StatusOK,
 				"msg":  "登陆成功！",

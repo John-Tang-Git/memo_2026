@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -85,13 +87,16 @@ func putFunc(ctx *gin.Context) {
 		return
 	}
 	var tmp_memo Memo
-	db.First(&tmp_memo, put.ID)
+	db.Where("memo_id=?", put.ID).First(&tmp_memo)
+
+	// 检查有没有绑定前端传过来的json
+	fmt.Println("前端传过来的put", put.ID)
 
 	// 检查这条备忘录是不是当前用户写的
 	tmp_user, _ := ctx.Get("user")
 	userID := tmp_user.(common.UserInfo).ID
 	if tmp_memo.UserID != userID {
-		fmt.Printf("token无效，这条信息是%d写的，而目前操作者是%d", tmp_memo.UserID, userID)
+		fmt.Printf("这条信息是%d写的，而目前操作者是%d", tmp_memo.UserID, userID)
 		ctx.JSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "权限不足"})
 		return
 	}
@@ -135,6 +140,15 @@ func deleteFunc(ctx *gin.Context) {
 func main() {
 	// 默认路由
 	route := gin.Default()
+	// 允许所有CORS访问
+	route.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true, // 允许所有源
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{"Content-Length", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 	// 连接数据库
 	DSN := "root:Johntang2005@tcp(127.0.0.1:3306)/user_memos?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err = gorm.Open(mysql.Open(DSN), &gorm.Config{})
